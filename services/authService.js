@@ -1,86 +1,104 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../models/User.js"
+import User from "../models/User.js";
 
 const register = async (data) => {
-    const { nome, email, password, telefone, role } = data;
+  const { nome, email, password, telefone, role } = data;
 
-    if (!nome || !email || !password) {
-        throw new Error("Nome, email e senha são obrigatorias")
-    }
+  if (!nome || !email || !password) {
+    const error = new Error("Nome, email e senha são obrigatórios");
+    error.statusCode = 400;
+    throw error;
+  }
 
-    const userExists = await User.findOne({ email });
+  const userExists = await User.findOne({ email });
 
-    if (userExists) {
-        throw new Error("Ja existe um usuário com este email")
-    }
+  if (userExists) {
+    const error = new Error("Já existe um usuário com esse email");
+    error.statusCode = 400;
+    throw error;
+  }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-        nome,
-        email,
-        password: hashedPassword,
-        telefone,
-        role: role || "user",
-        ativo: true,
-    });
+  const user = await User.create({
+    nome,
+    email,
+    password: hashedPassword,
+    telefone,
+    role: role || "user",
+    ativo: true,
+  });
 
-    return {
-        _id: user._id,
-        nome: user.nome,
-        email: user.email,
-        telefone: user.telefone,
-        role: user.role,
-        ativo: user.ativo,
-    };
-}
+  return {
+    _id: user._id,
+    nome: user.nome,
+    email: user.email,
+    telefone: user.telefone,
+    role: user.role,
+    ativo: user.ativo,
+  };
+};
 
 const login = async (data) => {
-    const { email, password} = data;
-    if (!email || !password) {
-        throw new Error("Email e senha são obrigatorios")
-    }
+  const { email, password } = data;
 
-    const user = await User.findOne({ email }).select("+password")
+  if (!email || !password) {
+    const error = new Error("Email e senha são obrigatórios");
+    error.statusCode = 400;
+    throw error;
+  }
 
-    if (!user) {
-        throw new Error("Email ou senha inválidos")
-    }
+  const user = await User.findOne({ email }).select("+password");
 
-    if (!user.ativo) {
-        throw new Error("Usuário Inativo")
-    }
+  if (!user) {
+    const error = new Error("Email ou senha inválidos");
+    error.statusCode = 401;
+    throw error;
+  }
 
-    const passwordIsCorrect = await bcrypt.compare(password, user.password)
-    if (!passwordIsCorrect) {
-        throw new Error("senha invalidos")
-    }
+  if (!user.ativo) {
+    const error = new Error("Usuário inativo. Entre em contato com a administração");
+    error.statusCode = 403;
+    throw error;
+  }
 
-    const token = jwt.sign ( 
-        {
-            id: user._id,
-            role: user.role,
-        },
-        process.env.JWT_SECRET,
-        {
-            expiresIn: process.env.JWT_EXPIRES_IN || "id",
-        }
-    )
+  const passwordIsCorrect = await bcrypt.compare(password, user.password);
 
-    return {
-        user: {
-            _id: user._id,
-            nome: user.nome,
-            email: user.email,
-            telefone: user.telefone,
-            role: user.role,
-            ativo: user.ativo,
-        },
-        token,
-    };
+  if (!passwordIsCorrect) {
+    const error = new Error("Email ou senha inválidos");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const token = jwt.sign(
+    {
+      id: user._id,
+      role: user.role,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "1d",
     }
-    export default {
-        login,
-        register,
-    }
+  );
+
+  return {
+    user: {
+      _id: user._id,
+      nome: user.nome,
+      email: user.email,
+      telefone: user.telefone,
+      role: user.role,
+      ativo: user.ativo,
+    },
+    token,
+  };
+};
+
+
+
+export default {
+  register,
+  login,
+  
+};

@@ -47,9 +47,39 @@ const deactivateUser = async (id) => {
 
 };
 
+const updateMe = async (userId, data) => {
+  delete data.role;
+  delete data.ativo;
+  delete data.password
+
+
+  if (data.email) {
+    const emailExists = await User.findOne({
+      email: data.email,
+      _id: { $ne: userId }
+    })
+
+    if (emailExists) {
+      throw new Error("Ja existe um usuario com este email")
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(userId, data, {
+    new: true,
+    runValidators: true
+  })
+
+  if (!user) {
+    throw new Error("Usúario não encontrado")
+  }
+
+  return user;
+}
+
 export default {
   getAllUsers,
   getUserById,
   updateUser,
   deactivateUser,
+  updateMe
 };

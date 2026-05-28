@@ -9,15 +9,16 @@ const authMiddleware = async (req, res, next) => {
             return res.status(401).json({ error: "Token não enviado" })
         }
 
-        const parts = authorization.splint(" ");
+        const parts = authorization.split(" ");
+
         if (parts.length !== 2) {
             return res.status(401).json({ error: "Token mal formatado" })
         }
 
         const [scheme, token] = parts;
 
-        if (scheme !== "Bearer") {
-            return res.status(401).json({ error: "Formato do token inválido" })
+        if ( scheme !== "Bearer") {
+            return res.status(401).json({ error: "Formato do token invalido" })
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -29,13 +30,14 @@ const authMiddleware = async (req, res, next) => {
         }
 
         if (!user.ativo) {
-            return res.status(403).json({ error: "Usuário inativo"})
+            return res.status(403).json({ error: "Usuário inativo" })
         }
 
         req.user = user;
-    next();
-    } catch (error) {
-        return res.status(401).json({ error: "Token inválido ou expirado"})
+
+        next();
+    } catch (error){
+        return res.status(401).json({ error: "Token inválido ou expirado" })
     }
 }
 
